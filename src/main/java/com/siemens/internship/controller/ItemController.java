@@ -4,6 +4,7 @@ import com.siemens.internship.model.Item;
 import com.siemens.internship.service.ItemService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -39,11 +40,15 @@ public class ItemController {
 
 
     @PostMapping
-    public ResponseEntity<Item> createItem(@Valid @RequestBody Item item, BindingResult result) {
+    public ResponseEntity<?> createItem(@Valid @RequestBody Item item, BindingResult result) {
         if (result.hasErrors()) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            List<String> errors = result.getAllErrors().stream()
+                    .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+        } else {
+            return ResponseEntity.status(HttpStatus.CREATED).body(itemService.save(item));
         }
-        return new ResponseEntity<>(itemService.save(item),  HttpStatus.CREATED);
     }
 
 
