@@ -27,9 +27,9 @@ public class ItemController {
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item, BindingResult result) {
         if (result.hasErrors()) {
-            return new ResponseEntity<>(null, HttpStatus.CREATED);
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(itemService.save(item), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(itemService.save(item),  HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
@@ -44,9 +44,9 @@ public class ItemController {
         Optional<Item> existingItem = itemService.findById(id);
         if (existingItem.isPresent()) {
             item.setId(id);
-            return new ResponseEntity<>(itemService.save(item), HttpStatus.CREATED);
+            return new ResponseEntity<>(itemService.save(item), HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.ACCEPTED);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
