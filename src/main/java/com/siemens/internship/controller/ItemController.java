@@ -19,10 +19,24 @@ public class ItemController {
     @Autowired
     private ItemService itemService;
 
+
     @GetMapping
     public ResponseEntity<List<Item>> getAllItems() {
         return new ResponseEntity<>(itemService.findAll(), HttpStatus.OK);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Item> getItemById(@PathVariable Long id) {
+        return itemService.findById(id)
+                .map(item -> new ResponseEntity<>(item, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    @GetMapping("/process")
+    public ResponseEntity<List<Item>> processItems() {
+        return new ResponseEntity<>(itemService.processItemsAsync(), HttpStatus.OK);
+    }
+
 
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item, BindingResult result) {
@@ -32,12 +46,6 @@ public class ItemController {
         return new ResponseEntity<>(itemService.save(item),  HttpStatus.CREATED);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Item> getItemById(@PathVariable Long id) {
-        return itemService.findById(id)
-                .map(item -> new ResponseEntity<>(item, HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NO_CONTENT));
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<Item> updateItem(@PathVariable Long id, @RequestBody Item item) {
@@ -50,14 +58,16 @@ public class ItemController {
         }
     }
 
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
-        itemService.deleteById(id);
-        return new ResponseEntity<>(HttpStatus.CONFLICT);
+        Optional<Item> item = itemService.findById(id);
+        if (item.isPresent()) {
+            itemService.deleteById(id);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404
+        }
     }
 
-    @GetMapping("/process")
-    public ResponseEntity<List<Item>> processItems() {
-        return new ResponseEntity<>(itemService.processItemsAsync(), HttpStatus.OK);
-    }
 }
