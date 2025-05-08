@@ -1,5 +1,6 @@
 package com.siemens.internship.controller;
 
+import com.siemens.internship.dto.ItemUpdateDTO;
 import com.siemens.internship.model.Item;
 import com.siemens.internship.service.ItemService;
 import jakarta.validation.Valid;
@@ -53,13 +54,19 @@ public class ItemController {
 
 
     @PutMapping("/{id}")
-    public ResponseEntity<Item> updateItem(@PathVariable Long id, @RequestBody Item item) {
-        Optional<Item> existingItem = itemService.findById(id);
-        if (existingItem.isPresent()) {
-            item.setId(id);
-            return new ResponseEntity<>(itemService.save(item), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<?> updateItem(@PathVariable Long id, @Valid @RequestBody ItemUpdateDTO dto, BindingResult result) {
+        if (result.hasErrors()) {
+            List<String> errors = result.getAllErrors().stream()
+                    .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+        }
+
+        try {
+            Item updatedItem = itemService.updateItem(id, dto);
+            return ResponseEntity.status(HttpStatus.OK).body(updatedItem);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 

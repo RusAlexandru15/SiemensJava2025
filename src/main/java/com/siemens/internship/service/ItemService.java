@@ -1,5 +1,6 @@
 package com.siemens.internship.service;
 
+import com.siemens.internship.dto.ItemUpdateDTO;
 import com.siemens.internship.model.Item;
 import com.siemens.internship.repository.ItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,35 @@ public class ItemService {
     public void deleteById(Long id) {
         itemRepository.deleteById(id);
     }
+
+    /**
+     * Updates an existing item
+     * Skips any fields that are null or blank (only new description can be blank)
+     * Throws an exception if the item is not found
+     */
+    public Item updateItem(Long id, ItemUpdateDTO dto) {
+        Item existingItem = itemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            existingItem.setName(dto.getName());
+        }
+
+        if (dto.getDescription() != null) {
+            existingItem.setDescription(dto.getDescription());
+        }
+
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            existingItem.setStatus(dto.getStatus());
+        }
+
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            existingItem.setEmail(dto.getEmail());
+        }
+
+        return itemRepository.save(existingItem);
+    }
+
 
 
     /**
