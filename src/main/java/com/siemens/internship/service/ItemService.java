@@ -12,14 +12,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class ItemService {
     @Autowired
     private ItemRepository itemRepository;
-    private static ExecutorService executor = Executors.newFixedThreadPool(10);
-    private List<Item> processedItems = new ArrayList<>();
-    private int processedCount = 0;
+    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
+    private  List<Item> processedItems = new CopyOnWriteArrayList<>();
+    private  AtomicInteger processedCount = new AtomicInteger(0);;
 
 
     public List<Item> findAll() {
@@ -92,34 +93,54 @@ public class ItemService {
      * Examine how errors are handled and propagated
      * Consider the interaction between Spring's @Async and CompletableFuture
      */
+
+
+    /**
+     * My Solution
+     * 1) What was wrong with the original implementation: (each issue has its fixe below)
+     *      - @Async was misused (method returned synchronously list<>, not a CompletableFuture )
+     *      - Used non-thread-safe shared resources (list and counter)
+     *      - Thread.sleep() caused inefficient resource use
+     *      - All items were processed even if already marked as "PROCESSED"
+     *      - Exceptions inside async tasks were not properly handled (only InterruptedException was caught)
+     *      - Returned the result before all async tasks completed
+     *
+     * 2) Fixes
+     *      - Changed return type to CompletableFuture<List<Item>> to properly support async execution
+     *      - Used CopyOnWriteArrayList for processedItems and AtomicInteger for processedCount
+     *      - Removed Thread.sleep()
+     *      - Added DB query to load only UNPROCESSED items (not ids) and reduced repository access from 3 calls to 2
+     *      - Logged  all exceptions (not just InterruptedException)
+     *      - Returned the result after all async tasks completed using allOf method
+     *      */
+
     @Async
-    public List<Item> processItemsAsync() {
+    public CompletableFuture<List<Item>> processItemsAsync() {
 
-        List<Long> itemIds = itemRepository.findAllIds();
+        List<Item> unprocessedItems = itemRepository.findAllUnprocessedItems();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        for (Long id : itemIds) {
-            CompletableFuture.runAsync(() -> {
+        // Reset processed items and count at every call
+        processedItems = new CopyOnWriteArrayList<>();
+        processedCount = new AtomicInteger(0);
+
+        for (Item item : unprocessedItems) {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
-                    Thread.sleep(100);
-
-                    Item item = itemRepository.findById(id).orElse(null);
-                    if (item == null) {
-                        return;
-                    }
-
-                    processedCount++;
 
                     item.setStatus("PROCESSED");
                     itemRepository.save(item);
                     processedItems.add(item);
+                    processedCount.incrementAndGet();
 
-                } catch (InterruptedException e) {
-                    System.out.println("Error: " + e.getMessage());
+                } catch (Exception e) {
+                    System.err.println("Error processing item " + item.getId() + ": " + e.getMessage());
                 }
             }, executor);
+            futures.add(future);
         }
-
-        return processedItems;
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> processedItems);
     }
 
 }

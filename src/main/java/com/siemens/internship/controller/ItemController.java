@@ -4,7 +4,9 @@ import com.siemens.internship.dto.ItemCreateDTO;
 import com.siemens.internship.dto.ItemUpdateDTO;
 import com.siemens.internship.model.Item;
 import com.siemens.internship.service.ItemService;
+
 import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -37,7 +39,8 @@ public class ItemController {
 
     @GetMapping("/process")
     public ResponseEntity<List<Item>> processItems() {
-        return new ResponseEntity<>(itemService.processItemsAsync(), HttpStatus.OK);
+        List<Item> processed = itemService.processItemsAsync().join();
+        return new ResponseEntity<>(processed, HttpStatus.OK);
     }
 
 
