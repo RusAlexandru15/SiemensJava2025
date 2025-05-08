@@ -1,5 +1,6 @@
 package com.siemens.internship.controller;
 
+import com.siemens.internship.dto.ItemCreateDTO;
 import com.siemens.internship.dto.ItemUpdateDTO;
 import com.siemens.internship.model.Item;
 import com.siemens.internship.service.ItemService;
@@ -41,14 +42,14 @@ public class ItemController {
 
 
     @PostMapping
-    public ResponseEntity<?> createItem(@Valid @RequestBody Item item, BindingResult result) {
+    public ResponseEntity<?> createItem(@Valid @RequestBody ItemCreateDTO dto, BindingResult result) {
         if (result.hasErrors()) {
             List<String> errors = result.getAllErrors().stream()
                     .map(DefaultMessageSourceResolvable::getDefaultMessage)
                     .toList();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
         } else {
-            return ResponseEntity.status(HttpStatus.CREATED).body(itemService.save(item));
+            return ResponseEntity.status(HttpStatus.CREATED).body(itemService.save(dto));
         }
     }
 

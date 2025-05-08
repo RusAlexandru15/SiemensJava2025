@@ -1,5 +1,6 @@
 package com.siemens.internship.service;
 
+import com.siemens.internship.dto.ItemCreateDTO;
 import com.siemens.internship.dto.ItemUpdateDTO;
 import com.siemens.internship.model.Item;
 import com.siemens.internship.repository.ItemRepository;
@@ -29,7 +30,13 @@ public class ItemService {
         return itemRepository.findById(id);
     }
 
-    public Item save(Item item) {
+    public Item save(ItemCreateDTO dto) {
+        Item item = new Item();
+
+        item.setName(dto.getName());
+        item.setDescription(dto.getDescription());
+        item.setStatus(dto.getStatus());
+        item.setEmail(dto.getEmail());
         return itemRepository.save(item);
     }
 
