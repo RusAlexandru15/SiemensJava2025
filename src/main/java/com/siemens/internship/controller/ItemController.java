@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 
 @RestController
 @RequestMapping("/api/items")
@@ -38,9 +39,14 @@ public class ItemController {
     }
 
     @GetMapping("/process")
-    public ResponseEntity<List<Item>> processItems() {
-        List<Item> processed = itemService.processItemsAsync().join();
-        return new ResponseEntity<>(processed, HttpStatus.OK);
+    public ResponseEntity<?> processItems() {
+        try {
+            List<Item> processed = itemService.processItemsAsync().join();
+            return new ResponseEntity<>(processed, HttpStatus.OK);
+        }catch (CompletionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Processing failed: " + e.getCause().getMessage());
+        }
     }
 
 

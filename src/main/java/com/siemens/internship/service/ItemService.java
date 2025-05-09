@@ -110,7 +110,7 @@ public class ItemService {
      *      - Used CopyOnWriteArrayList for processedItems and AtomicInteger for processedCount
      *      - Removed Thread.sleep()
      *      - Added DB query to load only UNPROCESSED items (not ids) and reduced repository access from 3 calls to 2
-     *      - Logged  all exceptions (not just InterruptedException)
+     *      - Threw  all exceptions from async task (not just InterruptedException)
      *      - Returned the result after all async tasks completed using allOf method
      *      */
 
@@ -126,17 +126,13 @@ public class ItemService {
 
         for (Item item : unprocessedItems) {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                try {
+                item.setStatus("PROCESSED");
+                itemRepository.save(item);
+                processedItems.add(item);
+                processedCount.incrementAndGet();
 
-                    item.setStatus("PROCESSED");
-                    itemRepository.save(item);
-                    processedItems.add(item);
-                    processedCount.incrementAndGet();
-
-                } catch (Exception e) {
-                    System.err.println("Error processing item " + item.getId() + ": " + e.getMessage());
-                }
-            }, executor);
+            }, executor).exceptionally(ex -> {
+                throw new CompletionException("Error processing item " + item.getId(), ex);});
             futures.add(future);
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
